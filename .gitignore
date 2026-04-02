@@ -1,4 +1,8 @@
-# Local environment (CHAINID, BOOTNODE, IP)
+# Per-network env (see config/networks/*/env.example)
+.env.mainnet
+.env.testnet
+
+# Legacy single .env
 .env
 .env.local
 
@@ -6,6 +10,10 @@
 validator-keys/**/*.json
 
 # Runtime data
-chaindata/node*/
+chaindata/mainnet/node*/
+chaindata/testnet/node*/
 tmp/*
 !tmp/.gitkeep
+
+# Old layout (remove after migrating)
+chaindata/node*/
