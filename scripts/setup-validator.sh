@@ -55,7 +55,7 @@ task5(){
   echo -e "\n\n${ORANGE}TASK: ${GREEN}[Setting up Permissions]${NC}\n"
   cd "$REPO_ROOT"
   chown -R root:root ./
-  chmod a+x "$REPO_ROOT/scripts/setup-validator.sh" "$REPO_ROOT/scripts/start-validator.sh" "$REPO_ROOT/scripts/reset-chaindata.sh"
+  chmod a+x "$REPO_ROOT/scripts/setup-validator.sh" "$REPO_ROOT/scripts/start-validator.sh" "$REPO_ROOT/scripts/reset-chaindata.sh" "$REPO_ROOT/scripts/print-enode.sh"
   echo -e "\n${GREEN}[TASK 5 PASSED]${NC}\n"
 }
 

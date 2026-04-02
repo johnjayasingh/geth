@@ -14,14 +14,16 @@ NETWORK=""
 totalValidator=0
 totalNodes=0
 isValidator=false
+MAX_NODES=""  # empty = all
 
 usage() {
   echo -e "\nUsage: $0 --network <mainnet|testnet> --validator [OPTIONS]"
   echo "Options:"
-  echo -e "\t-h, --help       This help"
-  echo -e "\t-v, --verbose    Verbose"
-  echo -e "\t--network        mainnet or testnet (required)"
-  echo -e "\t--validator      Start all validator nodes for this network"
+  echo -e "\t-h, --help          This help"
+  echo -e "\t-v, --verbose       Verbose"
+  echo -e "\t--network           mainnet or testnet (required)"
+  echo -e "\t--validator         Start validator node(s) for this network"
+  echo -e "\t--max-nodes <n>     Only start node1..nodeN (default: all). Use 1 first on fresh testnet, then set BOOTNODE and use 2."
 }
 
 handle_options() {
@@ -40,6 +42,13 @@ handle_options() {
       ;;
     --network=*)
       NETWORK="${1#*=}"
+      ;;
+    --max-nodes)
+      MAX_NODES="${2:-}"
+      shift
+      ;;
+    --max-nodes=*)
+      MAX_NODES="${1#*=}"
       ;;
     --validator)
       isValidator=true
@@ -67,6 +76,11 @@ if [ -z "$NETWORK" ] || { [ "$NETWORK" != mainnet ] && [ "$NETWORK" != testnet ]
   exit 1
 fi
 
+if [ -n "$MAX_NODES" ] && ! [[ "$MAX_NODES" =~ ^[1-9][0-9]*$ ]]; then
+  echo "--max-nodes must be a positive integer" >&2
+  exit 1
+fi
+
 ENV_FILE="$REPO_ROOT/.env.$NETWORK"
 if [ ! -f "$ENV_FILE" ]; then
   echo "Missing $ENV_FILE — copy config/networks/$NETWORK/env.example to .env.$NETWORK and set CHAINID, BOOTNODE, IP." >&2
@@ -75,14 +89,31 @@ fi
 # shellcheck disable=SC1091
 source "$ENV_FILE"
 
+bootnode_placeholder() {
+  [ -z "$BOOTNODE" ] && return 0
+  [[ "$BOOTNODE" == *"REPLACE"* ]] && return 0
+  [[ "$BOOTNODE" == *"<"* && "$BOOTNODE" == *">"* ]] && return 0
+  return 1
+}
+
+nat_string() {
+  if [ -n "$IP" ]; then
+    echo "--nat extip:$IP"
+  else
+    echo "--nat any"
+  fi
+}
+
 welcome(){
+  local osname
+  osname="$(. /etc/os-release 2>/dev/null && printf '%s\n' "${PRETTY_NAME}")" || osname="unknown"
   echo -e "\n\n\t${ORANGE}Network: $NETWORK"
   echo -e "\t${ORANGE}Validators: $totalValidator"
   echo -e "\t${ORANGE}Data directories: chaindata/$NETWORK/node*"
   echo -e "${GREEN}
   \t+------------------------------------------------+
   \t+   G8Chain validator
-  \t+   OS: $(. /etc/os-release && printf '%s\n' "${PRETTY_NAME}")
+  \t+   OS: $osname
   \t+   scripts/start-validator.sh --help
   \t+------------------------------------------------+
   ${NC}\n"
@@ -112,17 +143,40 @@ countNodes(){
 
 startValidator(){
   local i=1
-  # testnet defaults +100 on port base so mainnet + testnet can run on one host without collision
   local off=0
   [ "$NETWORK" = testnet ] && off=100
-  while [[ $i -le $totalValidator ]]; do
+  local limit=$totalValidator
+  if [ -n "$MAX_NODES" ]; then
+    if [ "$MAX_NODES" -lt "$totalValidator" ]; then
+      limit=$MAX_NODES
+    fi
+  fi
+
+  local natstr
+  natstr=$(nat_string)
+
+  while [[ $i -le $limit ]]; do
     local p=$((32668 + off + i))
     local sess="${NETWORK}-n${i}"
+
+    local bootflag=""
+    if [ "$i" -ge 2 ]; then
+      if bootnode_placeholder; then
+        echo "Validator $i requires BOOTNODE in .env.$NETWORK (enode from node 1: ./scripts/print-enode.sh --network $NETWORK --node 1)." >&2
+        exit 1
+      fi
+      bootflag="--bootnodes $BOOTNODE"
+    else
+      if ! bootnode_placeholder; then
+        bootflag="--bootnodes $BOOTNODE"
+      fi
+    fi
+
     if tmux has-session -t "$sess" > /dev/null 2>&1; then
       :
     else
       tmux new-session -d -s "$sess"
-      tmux send-keys -t "$sess" "$GETH --datadir ./chaindata/$NETWORK/node$i --networkid $CHAINID --bootnodes $BOOTNODE --mine --port $p --nat extip:$IP --gpo.percentile 0 --gpo.maxprice 100 --gpo.ignoreprice 0 --unlock 0 --password ./chaindata/$NETWORK/node$i/pass.txt --syncmode=full console" Enter
+      tmux send-keys -t "$sess" "$GETH --datadir ./chaindata/$NETWORK/node$i --networkid $CHAINID $bootflag --mine --port $p $natstr --gpo.percentile 0 --gpo.maxprice 100 --gpo.ignoreprice 0 --unlock 0 --password ./chaindata/$NETWORK/node$i/pass.txt --syncmode=full console" Enter
     fi
     ((i += 1))
   done

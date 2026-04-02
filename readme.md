@@ -138,23 +138,56 @@ Edit **`.env.testnet`**:
 | Variable | What to set |
 |----------|-------------|
 | **`CHAINID`** | Must match **`config/networks/testnet/genesis.json`**. |
-| **`BOOTNODE`** | ENR or `enode` from a peer **on testnet only** — not mainnet. |
-| **`IP`** | Public IP of this host (same idea as mainnet). |
+| **`BOOTNODE`** | See **two-node flow** below: empty for validator 1 only, then node 1’s enode for validator 2. |
+| **`IP`** | Public IP for `--nat extip` (optional; scripts use `--nat any` if empty). |
 
-### 4. Run setup for testnet
+### 4. Build geth and create validators (one or two nodes)
+
+**Single testnet validator** (joins an existing testnet that already has peers):
 
 ```bash
 ./scripts/setup-validator.sh --network testnet --validator 1
-```
-
-Back up **`chaindata/testnet/node1/keystore/`** and **`pass.txt`**.
-
-### 5. Start the testnet validator
-
-```bash
+# set BOOTNODE to your network’s boot ENR/enode in .env.testnet, then:
 ./scripts/start-validator.sh --network testnet --validator
-tmux attach -t testnet-n1
 ```
+
+**Two validators on a fresh testnet** (node 1 acts as the seed peer / “bootnode” for node 2):
+
+1. **Build + two datadirs**
+
+   ```bash
+   ./scripts/setup-validator.sh --network testnet --validator 2
+   ```
+
+2. **Env — phase A** — In **`.env.testnet`**, set **`CHAINID`** to match testnet genesis. Leave **`BOOTNODE`** **empty** (or `""`) so validator **1** can start without an upstream bootnode.
+
+3. **Start validator 1 only**
+
+   ```bash
+   ./scripts/start-validator.sh --network testnet --validator --max-nodes 1
+   tmux attach -t testnet-n1
+   ```
+
+   Wait until it is running, then detach (**Ctrl+b**, **d**).
+
+4. **Get node 1’s enode** (needs IPC while node 1 is up)
+
+   ```bash
+   ./scripts/print-enode.sh --network testnet --node 1
+   ```
+
+5. **Env — phase B** — Put that **`enode://...`** line into **`BOOTNODE=`** in **`.env.testnet`**. If the enode shows `127.0.0.1` and the second validator runs on **another machine**, replace the IP with validator 1’s **reachable** address and ensure P2P port **32769** (first testnet validator) is allowed through the firewall.
+
+6. **Start validator 2** (session **`testnet-n2`**; node 1’s tmux session is left running)
+
+   ```bash
+   ./scripts/start-validator.sh --network testnet --validator --max-nodes 2
+   tmux attach -t testnet-n2
+   ```
+
+`--max-nodes N` starts only **`node1`…`nodeN`**. Already-running tmux sessions are skipped, so you can run step 3, then step 6, without duplicating node 1.
+
+Back up **`chaindata/testnet/node*/keystore/`** and **`pass.txt`** after setup.
 
 ---
 
