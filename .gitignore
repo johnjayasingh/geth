@@ -1,0 +1,11 @@
+# Local environment (CHAINID, BOOTNODE, IP)
+.env
+.env.local
+
+# Validator keystores — never commit
+validator-keys/**/*.json
+
+# Runtime data
+chaindata/node*/
+tmp/*
+!tmp/.gitkeep
