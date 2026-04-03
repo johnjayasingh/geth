@@ -232,6 +232,154 @@ cd geth && make all
 
 Keystores and **`pass.txt`** live under **`chaindata/<network>/node<N>/`**. Do not commit keys or **`.env.*`**. See **`.gitignore`**.
 
+---
+
+## Current testnet infrastructure
+
+| Role | IP | Domain | Notes |
+|------|----|--------|-------|
+| **Validator 0** (bootnode) | 194.5.129.120 | — | Also serves RPC on port 80 |
+| **Validator 1** | 194.5.129.118 | — | |
+| **Validator 2** | 194.5.129.237 | — | |
+| **RPC Node** | 194.5.129.128 | `https://testnet-rpc.g8chain.com` | HTTP :8545, WS :8546, nginx+SSL on :443 |
+| **Block Explorer** | 194.5.129.88 | `https://testnet-explorer.g8chain.com` | Blockscout on :4000, nginx+SSL on :443 |
+
+| Parameter | Value |
+|-----------|-------|
+| **Chain ID** | `17172` |
+| **Network ID** | `17172` |
+| **Consensus** | Congress (DPoS), 3 s blocks, epoch 100 |
+| **Genesis** | `config/networks/testnet/genesis.json` |
+| **Bootnode enode** | `enode://14b32b2c89b095aeaa75438e903c1150e90c10c1b13ca2fc3adead0e2fd3a3d0c13093d4e41268f16a08e2f4d29fdff3fc712ec79b8e1b125487284d9c014230@194.5.129.120:32669` |
+
+### MetaMask / wallet config
+
+| Field | Value |
+|-------|-------|
+| Network Name | G8Chain Testnet |
+| RPC URL | `https://testnet-rpc.g8chain.com` |
+| Chain ID | `17172` |
+| Currency Symbol | G8C |
+| Block Explorer | `https://testnet-explorer.g8chain.com` |
+
+---
+
+## Adding a new testnet validator
+
+If the setup scripts don't fit your environment or you want full control, follow these manual steps on an **Ubuntu 20.04+** server.
+
+### 1. Install dependencies
+
+```bash
+sudo apt update && sudo apt install -y build-essential git wget tmux
+```
+
+### 2. Install Go 1.17.3
+
+```bash
+cd /tmp && wget https://go.dev/dl/go1.17.3.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.17.3.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
+go env -w GO111MODULE=off
+```
+
+### 3. Clone and build
+
+```bash
+git clone https://github.com/johnjayasingh/g8chain-geth.git ~/core-blockchain
+cd ~/core-blockchain/geth && make geth
+```
+
+Binary lands at `geth/build/bin/geth`.
+
+### 4. Create a validator account
+
+```bash
+cd ~/core-blockchain
+mkdir -p chaindata/node1/keystore
+./geth/build/bin/geth --datadir ./chaindata/node1 account new
+```
+
+Save the password in `chaindata/node1/pass.txt` and **back up the keystore directory**.
+
+> **Important:** the new validator address must be added to the genesis `extraData` field and all nodes must re-init with the updated genesis for the validator to be authorized to seal blocks.
+
+### 5. Initialize genesis
+
+```bash
+./geth/build/bin/geth --datadir ./chaindata/node1 init ./config/networks/testnet/genesis.json
+```
+
+### 6. Start the validator
+
+Replace `<YOUR_IP>` with the server's public IP and `<BOOTNODE>` with the enode from the table above.
+
+```bash
+tmux new-session -d -s validator
+tmux send-keys -t validator './geth/build/bin/geth \
+  --datadir ./chaindata/node1 \
+  --networkid 17172 \
+  --port 32669 \
+  --mine \
+  --unlock 0 \
+  --allow-insecure-unlock \
+  --password ./chaindata/node1/pass.txt \
+  --syncmode full \
+  --gcmode archive \
+  --bootnodes "<BOOTNODE>" \
+  --nat extip:<YOUR_IP> \
+  --verbosity 2' Enter
+```
+
+### 7. Verify
+
+```bash
+tmux attach -t validator
+# Look for "Imported new chain segment" and increasing block numbers
+# Detach: Ctrl+b, then d
+```
+
+### Adding the validator to the active set
+
+A new validator address must appear in the genesis `extraData` to be allowed to seal. To add one:
+
+1. Stop **all** nodes on the network.
+2. Edit `config/networks/testnet/genesis.json` — in `extraData`, append the new 20-byte address (lowercase, no `0x`) between the 32-byte vanity prefix and the 65-byte signature suffix.
+3. Delete `chaindata/node*/geth/` on every node.
+4. Re-run `geth init` with the updated genesis on every node.
+5. Restart all nodes.
+
+The maximum active validator count is **21** (Congress consensus limit).
+
+---
+
+## Adding a testnet RPC node (non-mining)
+
+Same as above but skip `--mine --unlock 0 --password ...` and add HTTP/WS flags:
+
+```bash
+tmux new-session -d -s rpc
+tmux send-keys -t rpc 'sudo ./geth/build/bin/geth \
+  --datadir ./chaindata/node1 \
+  --networkid 17172 \
+  --port 32669 \
+  --syncmode full \
+  --gcmode archive \
+  --http --http.addr 0.0.0.0 --http.port 8545 \
+  --http.api eth,net,web3,txpool,debug \
+  --http.corsdomain "*" --http.vhosts "*" \
+  --ws --ws.addr 0.0.0.0 --ws.port 8546 \
+  --ws.api eth,net,web3,txpool --ws.origins "*" \
+  --bootnodes "<BOOTNODE>" \
+  --nat extip:<YOUR_IP> \
+  --verbosity 2' Enter
+```
+
+Use `sudo` if binding to port 80/443, or put nginx in front (recommended).
+
+---
+
 ## License
 
 See **`LICENSE`**.
