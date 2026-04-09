@@ -17,3 +17,6 @@ tmp/*
 
 # Old layout (remove after migrating)
 chaindata/node*/
+
+seed
+scripts
