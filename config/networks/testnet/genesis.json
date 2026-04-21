@@ -13,7 +13,9 @@
     "muirGlacierBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "rewardPoolBlock": 1,
+    "redCoastBlock": 2,
+    "sophonBlock": 3,
+    "rewardPoolBlock": 4,
     "congress": {
       "period": 3,
       "epoch": 100
