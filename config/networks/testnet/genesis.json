@@ -16,7 +16,7 @@
     "congress": {
       "period": 3,
       "epoch": 100,
-      "feeReceiver": "0x8b693F7675BB2BE5f895dB9Cd22a89bFf64dEB30"
+      "feeReceiver": "0x8A0e9B1CceB8176385Edb74BC90CC4bb6E87069d"
     }
   },
   "nonce": "0x0FF9",
@@ -30,13 +30,13 @@
   "gasUsed": "0x0",
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "alloc": {
-    "8b693f7675bb2be5f895db9cd22a89bff64deb30": {
-      "balance": "0x33b2e3c9fd0803ce8000000"
-    },
     "8e980df650e31baa803de434df3dc6a4fa23bb66": {
       "balance": "0x52b7d2dcc80cd2e4000000"
     },
     "705152dd5ae2a66583af1611bdb6a399c08cef0c": {
+      "balance": "0x52b7d2dcc80cd2e4000000"
+    },
+    "8a0e9b1cceb8176385edb74bc90cc4bb6e87069d": {
       "balance": "0x52b7d2dcc80cd2e4000000"
     }
   }
