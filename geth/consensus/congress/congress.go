@@ -598,15 +598,17 @@ func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
 func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header, receipts *[]*types.Receipt, systemTxs []*types.Transaction) error {
+	adminFeeMode := c.config.FeeReceiver != nil
+
 	// Initialize all system contracts at block 1.
-	if header.Number.Cmp(common.Big1) == 0 {
+	if !adminFeeMode && header.Number.Cmp(common.Big1) == 0 {
 		if err := c.initializeSystemContracts(chain, header, state); err != nil {
 			log.Error("Initialize system contracts failed", "err", err)
 			return err
 		}
 	}
 
-	if header.Difficulty.Cmp(diffInTurn) != 0 {
+	if !adminFeeMode && header.Difficulty.Cmp(diffInTurn) != 0 {
 		if err := c.tryPunishValidator(chain, header, state); err != nil {
 			return err
 		}
@@ -693,7 +695,7 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 	}
 
 	// do epoch thing at the end, because it will update active validators
-	if header.Number.Uint64()%c.config.Epoch == 0 {
+	if !adminFeeMode && header.Number.Uint64()%c.config.Epoch == 0 {
 		newValidators, err := c.doSomethingAtEpoch(chain, header, state)
 		if err != nil {
 			return err
@@ -763,15 +765,17 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 			log.Warn("FinalizeAndAssemble failed", "err", err)
 		}
 	}()
+	adminFeeMode := c.config.FeeReceiver != nil
+
 	// Initialize all system contracts at block 1.
-	if header.Number.Cmp(common.Big1) == 0 {
+	if !adminFeeMode && header.Number.Cmp(common.Big1) == 0 {
 		if err := c.initializeSystemContracts(chain, header, state); err != nil {
 			panic(err)
 		}
 	}
 
 	// punish validator if necessary
-	if header.Difficulty.Cmp(diffInTurn) != 0 {
+	if !adminFeeMode && header.Difficulty.Cmp(diffInTurn) != 0 {
 		if err := c.tryPunishValidator(chain, header, state); err != nil {
 			panic(err)
 		}
@@ -845,7 +849,7 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	}
 
 	// do epoch thing at the end, because it will update active validators
-	if header.Number.Uint64()%c.config.Epoch == 0 {
+	if !adminFeeMode && header.Number.Uint64()%c.config.Epoch == 0 {
 		if _, err := c.doSomethingAtEpoch(chain, header, state); err != nil {
 			//panic(err)
 			log.Info(err.Error())
@@ -903,6 +907,15 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 func (c *Congress) trySendBlockReward(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, addr [] common.Address,gass [] uint64) error {
 	fee := state.GetBalance(consensus.FeeRecoder)
 	if fee.Cmp(common.Big0) <= 0 {
+		return nil
+	}
+
+	// Simple admin fee routing: 100% of fees go to the configured receiver.
+	// Skip validator/staker distribution entirely.
+	if c.config.FeeReceiver != nil {
+		state.AddBalance(*c.config.FeeReceiver, fee)
+		state.SetBalance(consensus.FeeRecoder, common.Big0)
+		log.Debug("Block fees routed to admin fee receiver", "block", header.Number, "fee", fee, "receiver", c.config.FeeReceiver.Hex())
 		return nil
 	}
 
@@ -1302,6 +1315,10 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 }
 
 func (c *Congress) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	// In admin fee-routing mode no system contracts exist; skip all upgrades.
+	if c.config.FeeReceiver != nil {
+		return nil
+	}
 	if c.chainConfig.RedCoastBlock != nil && c.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
 		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, c), c.chainConfig)
 	}

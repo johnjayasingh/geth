@@ -280,6 +280,12 @@ type CongressConfig struct {
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 
 	EnableDevVerification bool `json:"enableDevVerification"` // Enable developer address verification
+
+	// FeeReceiver, when set, puts the chain into "simple admin fee routing" mode:
+	// all transaction fees are credited directly to this address and no system
+	// contracts (Validators/Punish/Proposal/RewardPool) are touched. Admin holds
+	// the key and can withdraw or burn at will.
+	FeeReceiver *common.Address `json:"feeReceiver,omitempty"`
 }
 
 // String implements the stringer interface, returning the consensus engine details.
