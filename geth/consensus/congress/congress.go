@@ -569,9 +569,15 @@ func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 	header.Extra = header.Extra[:extraVanity]
 
 	if number%c.config.Epoch == 0 {
-		newSortedValidators, err := c.getTopValidators(chain, header)
-		if err != nil {
-			return err
+		var newSortedValidators []common.Address
+		if c.config.FeeReceiver != nil {
+			// Admin fee-routing mode: no validators contract; fixed set from snapshot.
+			newSortedValidators = snap.validators()
+		} else {
+			newSortedValidators, err = c.getTopValidators(chain, header)
+			if err != nil {
+				return err
+			}
 		}
 
 		for _, validator := range newSortedValidators {
