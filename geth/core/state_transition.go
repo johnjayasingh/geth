@@ -404,6 +404,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	tip := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip)
 	if st.evm.ChainConfig().Congress != nil {
 		st.state.AddBalance(consensus.FeeRecoder, tip)
+		// EIP-1559: the baseFee is deducted from the sender in buyGas but never credited
+		// anywhere. Route it to FeeRecoder so 100% of tx fees are captured for the RewardPool.
+		if london && st.evm.Context.BaseFee != nil && st.evm.Context.BaseFee.Sign() > 0 {
+			baseFeeAmount := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.evm.Context.BaseFee)
+			st.state.AddBalance(consensus.FeeRecoder, baseFeeAmount)
+		}
 	} else {
 		st.state.AddBalance(st.evm.Context.Coinbase, tip)
 	}

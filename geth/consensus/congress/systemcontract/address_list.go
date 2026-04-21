@@ -40,7 +40,7 @@ func (s *hardForkAddressList) Update(config *params.ChainConfig, height *big.Int
 }
 
 func (s *hardForkAddressList) getAdminByChainId(chainId *big.Int) common.Address {
-	if chainId.Cmp(params.MainnetChainConfig.ChainID) == 0 {
+	if chainId.Cmp(params.G8MainnetChainID) == 0 {
 		return devAdmin
 	}
 

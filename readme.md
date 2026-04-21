@@ -246,8 +246,8 @@ Keystores and **`pass.txt`** live under **`chaindata/<network>/node<N>/`**. Do n
 
 | Parameter | Value |
 |-----------|-------|
-| **Chain ID** | `17172` |
-| **Network ID** | `17172` |
+| **Chain ID** | `18181` |
+| **Network ID** | `18181` |
 | **Consensus** | Congress (DPoS), 3 s blocks, epoch 100 |
 | **Genesis** | `config/networks/testnet/genesis.json` |
 | **Bootnode enode** | `enode://14b32b2c89b095aeaa75438e903c1150e90c10c1b13ca2fc3adead0e2fd3a3d0c13093d4e41268f16a08e2f4d29fdff3fc712ec79b8e1b125487284d9c014230@194.5.129.120:32669` |
@@ -258,7 +258,7 @@ Keystores and **`pass.txt`** live under **`chaindata/<network>/node<N>/`**. Do n
 |-------|-------|
 | Network Name | G8Chain Testnet |
 | RPC URL | `https://testnet-rpc.g8chain.com` |
-| Chain ID | `17172` |
+| Chain ID | `18181` |
 | Currency Symbol | G8C |
 | Block Explorer | `https://testnet-explorer.g8chain.com` |
 
@@ -319,7 +319,7 @@ Replace `<YOUR_IP>` with the server's public IP and `<BOOTNODE>` with the enode 
 tmux new-session -d -s validator
 tmux send-keys -t validator './geth/build/bin/geth \
   --datadir ./chaindata/node1 \
-  --networkid 17172 \
+  --networkid 18181 \
   --port 32669 \
   --mine \
   --unlock 0 \
@@ -362,7 +362,7 @@ Same as above but skip `--mine --unlock 0 --password ...` and add HTTP/WS flags:
 tmux new-session -d -s rpc
 tmux send-keys -t rpc 'sudo ./geth/build/bin/geth \
   --datadir ./chaindata/node1 \
-  --networkid 17172 \
+  --networkid 18181 \
   --port 32669 \
   --syncmode full \
   --gcmode archive \

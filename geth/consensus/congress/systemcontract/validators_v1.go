@@ -40,7 +40,7 @@ func (s *hardForkValidatorsV1) Update(config *params.ChainConfig, height *big.In
 }
 
 func (s *hardForkValidatorsV1) getAdminByChainId(chainId *big.Int) common.Address {
-	if chainId.Cmp(params.MainnetChainConfig.ChainID) == 0 {
+	if chainId.Cmp(params.G8MainnetChainID) == 0 {
 		return validatorV1Admin
 	}
 

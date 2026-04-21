@@ -2474,6 +2474,72 @@ const PunishV1InteractiveABI = `[
     }
 ]`
 
+const RewardPoolInteractiveABI = `[
+    {
+      "inputs": [{"internalType": "address", "name": "_admin", "type": "address"}],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "address", "name": "to", "type": "address"},
+        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "admin",
+      "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingAdmin",
+      "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "address", "name": "_pendingAdmin", "type": "address"}],
+      "name": "setPendingAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "acceptAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBalance",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+]`
+
 // DevMappingPosition is the position of the state variable `devs`.
 // Since the state variables are as follow:
 //    bool public initialized;
@@ -2513,6 +2579,7 @@ var (
 	AddressListContractName  = "address_list"
 	ValidatorsV1ContractName = "validators_v1"
 	PunishV1ContractName     = "punish_v1"
+	RewardPoolContractName   = "reward_pool"
 	ValidatorsContractAddr   = common.HexToAddress("0x000000000000000000000000000000000000f000")
 	PunishContractAddr       = common.HexToAddress("0x000000000000000000000000000000000000f001")
 	ProposalAddr             = common.HexToAddress("0x000000000000000000000000000000000000f002")
@@ -2520,6 +2587,7 @@ var (
 	AddressListContractAddr  = common.HexToAddress("0x000000000000000000000000000000000000F004")
 	ValidatorsV1ContractAddr = common.HexToAddress("0x000000000000000000000000000000000000F005")
 	PunishV1ContractAddr     = common.HexToAddress("0x000000000000000000000000000000000000F006")
+	RewardPoolContractAddr   = common.HexToAddress("0x000000000000000000000000000000000000F007")
 	// SysGovToAddr is the To address for the system governance transaction, NOT contract address
 	SysGovToAddr = common.HexToAddress("0x000000000000000000000000000000000000ffff")
 
@@ -2543,6 +2611,8 @@ func init() {
 	abiMap[ValidatorsV1ContractName] = tmpABI
 	tmpABI, _ = abi.JSON(strings.NewReader(PunishV1InteractiveABI))
 	abiMap[PunishV1ContractName] = tmpABI
+	tmpABI, _ = abi.JSON(strings.NewReader(RewardPoolInteractiveABI))
+	abiMap[RewardPoolContractName] = tmpABI
 }
 
 func GetInteractiveABI() map[string]abi.ABI {

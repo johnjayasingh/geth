@@ -11,6 +11,9 @@
     "petersburgBlock": 0,
     "istanbulBlock": 0,
     "muirGlacierBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "rewardPoolBlock": 1,
     "congress": {
       "period": 3,
       "epoch": 100

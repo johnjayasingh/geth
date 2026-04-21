@@ -180,7 +180,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
-	PriceLimit: 1,
+	PriceLimit: 1_000_000_000_000_000, // 0.001 G8 (1e15 wei) minimum gas price
 	PriceBump:  10,
 
 	AccountSlots: 16,

@@ -906,6 +906,15 @@ func (c *Congress) trySendBlockReward(chain consensus.ChainHeaderReader, header 
 		return nil
 	}
 
+	// When the RewardPool fork is active, route 100% of collected fees to the
+	// RewardPool contract at 0xF007. The admin then decides to burn or withdraw.
+	if c.chainConfig.IsRewardPool(header.Number) {
+		state.AddBalance(systemcontract.RewardPoolContractAddr, fee)
+		state.SetBalance(consensus.FeeRecoder, common.Big0)
+		log.Debug("Block fees routed to RewardPool", "block", header.Number, "fee", fee)
+		return nil
+	}
+
 	// Miner will send tx to deposit block fees to contract, add to his balance first.
 	state.AddBalance(header.Coinbase, fee)
 	// reset fee
@@ -1298,6 +1307,9 @@ func (c *Congress) PreHandle(chain consensus.ChainHeaderReader, header *types.He
 	}
 	if c.chainConfig.SophonBlock != nil && c.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
 		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, c), c.chainConfig)
+	}
+	if c.chainConfig.RewardPoolBlock != nil && c.chainConfig.RewardPoolBlock.Cmp(header.Number) == 0 {
+		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV3, state, header, newChainContext(chain, c), c.chainConfig)
 	}
 	return nil
 }

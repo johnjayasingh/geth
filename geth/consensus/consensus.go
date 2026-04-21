@@ -30,7 +30,15 @@ import (
 )
 
 var (
+	// FeeRecoder is the transient per-block address that accumulates transaction
+	// fees before they are distributed (or routed to the RewardPool).
 	FeeRecoder = common.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+
+	// BurnAddress is the well-known unspendable sink for burned coins.
+	// Coins sent here are permanently removed from circulation and are publicly
+	// visible on block explorers. The RewardPool admin calls burn(amount) to
+	// transfer fees here.
+	BurnAddress = common.HexToAddress("0x000000000000000000000000000000000000dEaD")
 )
 
 // ChainHeaderReader defines a small collection of methods needed to access the local

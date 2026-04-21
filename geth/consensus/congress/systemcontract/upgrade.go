@@ -13,6 +13,7 @@ import (
 const (
 	SysContractV1 SysContractVersion = iota + 1
 	SysContractV2
+	SysContractV3
 )
 
 type SysContractVersion int
@@ -42,6 +43,10 @@ func ApplySystemContractUpgrade(version SysContractVersion, state *state.StateDB
 		sysContracts = []IUpgradeAction{
 			&hardForkAddressListV2{},
 			&hardForkValidatorsV2{},
+		}
+	case SysContractV3:
+		sysContracts = []IUpgradeAction{
+			&hardForkRewardPool{},
 		}
 	default:
 		log.Crit("unsupported SysContractVersion", "version", version)

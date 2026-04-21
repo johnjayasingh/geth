@@ -40,6 +40,13 @@ var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{}
 // the chain it belongs to.
 var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{}
 
+// G8MainnetChainID and G8TestnetChainID are the canonical chain IDs for G8Chain.
+// These are used by system contracts to select the correct admin address.
+var (
+	G8MainnetChainID = big.NewInt(17171)
+	G8TestnetChainID = big.NewInt(18181)
+)
+
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
@@ -238,8 +245,9 @@ type ChainConfig struct {
 	// the network that triggers the consensus upgrade.
 	TerminalTotalDifficulty *big.Int `json:"terminalTotalDifficulty,omitempty"`
 
-	RedCoastBlock *big.Int `json:"redCoastBlock,omitempty"` // RedCoast switch block (nil = no fork, set value ≥ 2 to activate it)
-	SophonBlock   *big.Int `json:"sophonBlock,omitempty"`   // Sophon switch block (nil = no fork, set > RedCoastBlock to activate it)
+	RedCoastBlock   *big.Int `json:"redCoastBlock,omitempty"`   // RedCoast switch block (nil = no fork, set value ≥ 2 to activate it)
+	SophonBlock     *big.Int `json:"sophonBlock,omitempty"`     // Sophon switch block (nil = no fork, set > RedCoastBlock to activate it)
+	RewardPoolBlock *big.Int `json:"rewardPoolBlock,omitempty"` // RewardPool switch block (nil = disabled); deploys RewardPool contract at 0xF007 and routes 100% of tx fees to it
 
 	// Various consensus engines
 	Ethash   *EthashConfig   `json:"ethash,omitempty"`
@@ -292,7 +300,7 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, RedCoastBlock: %v, Berlin: %v, London: %v, Sophon: %v, Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, RedCoastBlock: %v, Berlin: %v, London: %v, Sophon: %v, RewardPool: %v, Engine: %v}",
 		c.ChainID,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -309,6 +317,7 @@ func (c *ChainConfig) String() string {
 		c.BerlinBlock,
 		c.LondonBlock,
 		c.SophonBlock,
+		c.RewardPoolBlock,
 		engine,
 	)
 }
@@ -398,6 +407,12 @@ func (c *ChainConfig) IsSophon(num *big.Int) bool {
 	return isForked(c.SophonBlock, num)
 }
 
+// IsRewardPool returns whether num is at or after the RewardPoolBlock fork, which deploys
+// the RewardPool system contract and routes 100% of transaction fees to it.
+func (c *ChainConfig) IsRewardPool(num *big.Int) bool {
+	return isForked(c.RewardPoolBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -463,6 +478,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	for _, cur := range []fork{
 		{name: "redCoastBlock", block: c.RedCoastBlock, minValue: big.NewInt(2)},
 		{name: "sophonBlock", block: c.SophonBlock},
+		{name: "rewardPoolBlock", block: c.RewardPoolBlock, optional: true},
 	} {
 		// check minimal fork block
 		if cur.block != nil && cur.minValue != nil {
@@ -543,6 +559,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.ArrowGlacierBlock, newcfg.ArrowGlacierBlock, head) {
 		return newCompatError("Arrow Glacier fork block", c.ArrowGlacierBlock, newcfg.ArrowGlacierBlock)
+	}
+	if isForkIncompatible(c.RewardPoolBlock, newcfg.RewardPoolBlock, head) {
+		return newCompatError("RewardPool fork block", c.RewardPoolBlock, newcfg.RewardPoolBlock)
 	}
 	return nil
 }
